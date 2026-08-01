@@ -1,18 +1,31 @@
 package com.example.transittripprocessor.model;
 
+import java.util.Locale;
 import java.util.Objects;
 
-public record StopId(String value) {
+public enum StopId {
+    STOP_1("Stop1"),
+    STOP_2("Stop2"),
+    STOP_3("Stop3");
 
-    public StopId {
-        Objects.requireNonNull(value, "value must not be null");
-        if (value.isBlank()) {
-            throw new IllegalArgumentException("value must not be blank");
-        }
+    private final String csvValue;
+
+    StopId(String csvValue) {
+        this.csvValue = csvValue;
     }
 
-    @Override
-    public String toString() {
-        return value;
+    public String csvValue() {
+        return csvValue;
+    }
+
+    public static StopId fromCsvValue(String value) {
+        return switch (value.trim().toLowerCase(Locale.ROOT)) {
+            case "stop1" -> STOP_1;
+            case "stop2" -> STOP_2;
+            case "stop3" -> STOP_3;
+            default -> throw new IllegalArgumentException(
+                    "Unknown stop ID: " + value
+            );
+        };
     }
 }

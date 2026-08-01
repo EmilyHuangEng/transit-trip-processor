@@ -39,7 +39,7 @@ class TapCsvReaderTest {
                         1,
                         LocalDateTime.of(2023, 1, 22, 13, 0),
                         TapType.ON,
-                        new StopId("Stop1"),
+                        StopId.STOP_1,
                         "Company1",
                         "Bus37",
                         "5500005555555559"
@@ -48,12 +48,25 @@ class TapCsvReaderTest {
                         2,
                         LocalDateTime.of(2023, 1, 22, 13, 5),
                         TapType.OFF,
-                        new StopId("Stop2"),
+                        StopId.STOP_2,
                         "Company1",
                         "Bus37",
                         "5500005555555559"
                 )
         ), taps);
+    }
+
+    @Test
+    void readsLowercaseStopId() throws IOException {
+        Path input = tempDirectory.resolve("lowercase-stop-id.csv");
+        Files.writeString(input, """
+                ID, DateTimeUTC, TapType, StopId, CompanyId, BusID, PAN
+                1, 22-01-2023 13:00:00, ON, stop1, Company1, Bus37, 5500005555555559
+                """);
+
+        List<Tap> taps = reader.read(input);
+
+        assertEquals(StopId.STOP_1, taps.getFirst().stopId());
     }
 
     @Test

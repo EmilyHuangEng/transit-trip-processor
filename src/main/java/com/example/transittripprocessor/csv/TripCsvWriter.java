@@ -52,8 +52,8 @@ public class TripCsvWriter {
                 formatDateTime(trip.started()),
                 formatDateTime(trip.finished()),
                 Long.toString(trip.durationSecs()),
-                trip.fromStopId().value(),
-                trip.toStopId() == null ? "" : trip.toStopId().value(),
+                trip.fromStopId().csvValue(),
+                trip.toStopId() == null ? "" : trip.toStopId().csvValue(),
                 "$" + trip.chargeAmount().setScale(2, RoundingMode.HALF_UP)
                         .toPlainString(),
                 trip.companyId(),
