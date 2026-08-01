@@ -1,7 +1,6 @@
 package com.example.transittripprocessor.model;
 
 import java.util.Locale;
-import java.util.Objects;
 
 public enum StopId {
     STOP_1("Stop1"),
