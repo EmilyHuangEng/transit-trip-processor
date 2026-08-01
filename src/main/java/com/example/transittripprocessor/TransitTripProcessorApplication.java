@@ -4,10 +4,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class TransitTripProcessor {
-
+public class TransitTripProcessorApplication {
 	public static void main(String[] args) {
-		SpringApplication.run(TransitTripProcessor.class, args);
-	}
-
+        SpringApplication.run(TransitTripProcessorApplication.class, args);
+        System.out.println(">> in TransitTripProcessorApplication main ... ");
+    }
 }
