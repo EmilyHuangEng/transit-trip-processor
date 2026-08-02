@@ -5,6 +5,8 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 .env
+/input.csv
+/output.csv
 
 ### STS ###
 .apt_generated
