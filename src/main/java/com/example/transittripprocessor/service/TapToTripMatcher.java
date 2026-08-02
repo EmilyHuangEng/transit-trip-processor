@@ -91,8 +91,11 @@ public class TapToTripMatcher {
                     Tap matchingTapOn = activeTapOns.get(tripKey);
 
                     if (matchingTapOn != null) {
-                        // A matching OFF closes a completed or cancelled trip.
-                        trips.add(createClosedTrip(matchingTapOn, tap));
+                        if (matchingTapOn.stopId() == tap.stopId()) {
+                            trips.add(createCancelledTrip(matchingTapOn, tap));
+                        } else {
+                            trips.add(createCompletedTrip(matchingTapOn, tap));
+                        }
                     }
 
                     activeTapOns.remove(tripKey);
@@ -104,6 +107,7 @@ public class TapToTripMatcher {
             }
         }
 
+        // Process the tap on that only appear once.
         activeTapOns.values().stream()
                 .map(this::createIncompleteTrip)
                 .forEach(trips::add);
@@ -113,15 +117,35 @@ public class TapToTripMatcher {
                 .toList();
     }
 
-    private Trip createClosedTrip(Tap tapOn, Tap tapOff) {
-        boolean cancelled = tapOn.stopId() == tapOff.stopId();
-        BigDecimal charge = cancelled
-                ? BigDecimal.ZERO
-                : fareCalculator.fareBetween(
-                        tapOn.stopId(),
-                        tapOff.stopId()
-                );
+    private Trip createCompletedTrip(Tap tapOn, Tap tapOff) {
+        BigDecimal charge = fareCalculator.fareBetween(
+                tapOn.stopId(),
+                tapOff.stopId()
+        );
 
+        return createMatchedTrip(
+                tapOn,
+                tapOff,
+                charge,
+                TripStatus.COMPLETED
+        );
+    }
+
+    private Trip createCancelledTrip(Tap tapOn, Tap tapOff) {
+        return createMatchedTrip(
+                tapOn,
+                tapOff,
+                BigDecimal.ZERO,
+                TripStatus.CANCELLED
+        );
+    }
+
+    private Trip createMatchedTrip(
+            Tap tapOn,
+            Tap tapOff,
+            BigDecimal charge,
+            TripStatus status
+    ) {
         return new Trip(
                 tapOn.dateTimeUtc(),
                 tapOff.dateTimeUtc(),
@@ -135,7 +159,7 @@ public class TapToTripMatcher {
                 tapOn.companyId(),
                 tapOn.busId(),
                 tapOn.pan(),
-                cancelled ? TripStatus.CANCELLED : TripStatus.COMPLETED
+                status
         );
     }
 
