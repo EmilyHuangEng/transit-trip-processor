@@ -1,14 +1,25 @@
 package com.example.transittripprocessor.cli.command;
 
 import com.example.transittripprocessor.cli.CliCommand;
+import com.example.transittripprocessor.service.TapToTripProcessor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Path;
 
 @Component
 public class GenerateTripsFromTapsCommand implements CliCommand {
 
     private static final String COMMAND_NAME =
             "generate-trips";
+
+    private final TapToTripProcessor processor;
+
+    public GenerateTripsFromTapsCommand(TapToTripProcessor processor) {
+        this.processor = processor;
+    }
 
     @Override
     public String name() {
@@ -17,15 +28,18 @@ public class GenerateTripsFromTapsCommand implements CliCommand {
 
     @Override
     public void execute(ApplicationArguments arguments) {
-        System.out.println(
-                ">> in GenerateTripsFromTapsCommand..."
-        );
-
         String input = getRequiredArgument(arguments, "input");
         String output = getRequiredArgument(arguments, "output");
 
-        System.out.println("Input: " + input);
-        System.out.println("Output: " + output);
+        try {
+            processor.process(Path.of(input), Path.of(output));
+        } catch (IOException exception) {
+            throw new UncheckedIOException(
+                    "Failed to generate trips from " + input
+                            + " to " + output,
+                    exception
+            );
+        }
     }
 
     private String getRequiredArgument(
@@ -41,6 +55,6 @@ public class GenerateTripsFromTapsCommand implements CliCommand {
             );
         }
 
-        return values.get(0);
+        return values.getFirst();
     }
 }
