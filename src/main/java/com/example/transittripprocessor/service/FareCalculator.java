@@ -19,7 +19,7 @@ public class FareCalculator {
     static final BigDecimal STOP_2_STOP_3_FARE = new BigDecimal("5.50");
     static final BigDecimal STOP_1_STOP_3_FARE = new BigDecimal("7.30");
 
-        private static final Map<StopPair, BigDecimal> FARES = Map.of(
+    private static final Map<StopPair, BigDecimal> FARES = Map.of(
             new StopPair(STOP_1, STOP_2), STOP_1_STOP_2_FARE,
             new StopPair(STOP_2, STOP_3), STOP_2_STOP_3_FARE,
             new StopPair(STOP_1, STOP_3), STOP_1_STOP_3_FARE

@@ -81,7 +81,6 @@ public class TapCsvReader {
                     Long.parseLong(values.get(0)),
                     LocalDateTime.parse(values.get(1), DATE_TIME_FORMATTER),
                     TapType.valueOf(values.get(2).toUpperCase(Locale.ROOT)),
-                    // todo: check if input in csv is stop1 instead of Stop1
                     StopId.fromCsvValue(values.get(3)),
                     values.get(4),
                     values.get(5),
