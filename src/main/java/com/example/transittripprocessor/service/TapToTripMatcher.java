@@ -32,10 +32,18 @@ import static com.example.transittripprocessor.model.TapType.ON;
 @Service
 public class TapToTripMatcher {
 
+    /**
+     * Sort tap events by DateTimeUTC, using ID as a tie-breaker.
+     * This ensures chronological and deterministic processing.
+     */
     private static final Comparator<Tap> TAP_ORDER = Comparator
             .comparing(Tap::dateTimeUtc)
             .thenComparingLong(Tap::id);
 
+    /**
+     * Sort trips by start time, with identity fields as deterministic
+     * tie-breakers.
+     */
     private static final Comparator<Trip> TRIP_ORDER = Comparator
             .comparing(Trip::started)
             .thenComparing(Trip::pan)
@@ -49,6 +57,7 @@ public class TapToTripMatcher {
     }
 
     public List<Trip> match(List<Tap> taps) {
+        // report match(null) error with better error message.
         Objects.requireNonNull(taps, "taps must not be null");
 
         List<Tap> orderedTaps = taps.stream()
@@ -63,19 +72,35 @@ public class TapToTripMatcher {
         List<Trip> trips = new ArrayList<>();
 
         for (Tap tap : orderedTaps) {
-            TripKey key = TripKey.from(tap);
+            TripKey tripKey = TripKey.from(tap);
 
-            if (tap.tapType() == ON) {
-                Tap previousTapOn = activeTapOns.put(key, tap);
-                if (previousTapOn != null) {
-                    trips.add(createIncompleteTrip(previousTapOn));
+            switch (tap.tapType()) {
+                case ON -> {
+                    Tap previousTapOn = activeTapOns.get(tripKey);
+
+                    if (previousTapOn != null) {
+                        // When has previousTapOn, means there is no matching Tap off,
+                        // so consider as incomplete trip.
+                        trips.add(createIncompleteTrip(previousTapOn));
+                    }
+
+                    activeTapOns.put(tripKey, tap);
                 }
-                continue;
-            }
 
-            Tap matchingTapOn = activeTapOns.remove(key);
-            if (matchingTapOn != null) {
-                trips.add(createClosedTrip(matchingTapOn, tap));
+                case OFF -> {
+                    Tap matchingTapOn = activeTapOns.get(tripKey);
+
+                    if (matchingTapOn != null) {
+                        // A matching OFF closes a completed or cancelled trip.
+                        trips.add(createClosedTrip(matchingTapOn, tap));
+                    }
+
+                    activeTapOns.remove(tripKey);
+                }
+
+                default -> throw new IllegalArgumentException(
+                        "Unsupported tap type: " + tap.tapType()
+                );
             }
         }
 

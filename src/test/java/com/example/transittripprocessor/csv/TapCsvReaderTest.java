@@ -84,4 +84,21 @@ class TapCsvReaderTest {
 
         assertTrue(exception.getMessage().contains("line 2"));
     }
+
+    @Test
+    void rejectsAnUnknownTapTypeBeforeItReachesTheMatcher() throws IOException {
+        Path input = tempDirectory.resolve("unknown-tap-type.csv");
+        Files.writeString(input, """
+                ID, DateTimeUTC, TapType, StopId, CompanyId, BusID, PAN
+                1, 22-01-2023 13:00:00, START, Stop1, Company1, Bus37, 1234
+                """);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> reader.read(input)
+        );
+
+        assertTrue(exception.getMessage().contains("line 2"));
+        assertTrue(exception.getMessage().contains("TapType.START"));
+    }
 }
