@@ -4,6 +4,8 @@ import com.example.transittripprocessor.model.Tap;
 import com.example.transittripprocessor.model.Trip;
 import com.example.transittripprocessor.model.TripKey;
 import com.example.transittripprocessor.model.TripStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -32,6 +34,10 @@ import static com.example.transittripprocessor.model.TapType.ON;
 @Service
 public class TapToTripMatcher {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(
+            TapToTripMatcher.class
+    );
+
     /**
      * Sort tap events by DateTimeUTC, using ID as a tie-breaker.
      * This ensures chronological and deterministic processing.
@@ -41,8 +47,8 @@ public class TapToTripMatcher {
             .thenComparingLong(Tap::id);
 
     /**
-     * Sort trips by start time, with identity fields as deterministic
-     * tie-breakers.
+     * Keeps the output CSV in a stable, predictable order. Trips are ordered
+     * by start time, with identity fields used to break ties.
      */
     private static final Comparator<Trip> TRIP_ORDER = Comparator
             .comparing(Trip::started)
@@ -68,6 +74,7 @@ public class TapToTripMatcher {
                 .sorted(TAP_ORDER)
                 .toList();
 
+        // Stores Tap ON events that have been read but not yet matched with an OFF.
         Map<TripKey, Tap> activeTapOns = new HashMap<>();
         List<Trip> trips = new ArrayList<>();
 
@@ -81,9 +88,15 @@ public class TapToTripMatcher {
                     if (previousTapOn != null) {
                         // When has previousTapOn, means there is no matching Tap off,
                         // so consider as incomplete trip.
+                        logAbnormalTap(
+                                "REPEATED_TAP_ON",
+                                tap,
+                                previousTapOn.id()
+                        );
                         trips.add(createIncompleteTrip(previousTapOn));
                     }
 
+                    // Add or override
                     activeTapOns.put(tripKey, tap);
                 }
 
@@ -96,6 +109,12 @@ public class TapToTripMatcher {
                         } else {
                             trips.add(createCompletedTrip(matchingTapOn, tap));
                         }
+                    } else {
+                        logAbnormalTap(
+                                "TAP_OFF_WITHOUT_TAP_ON",
+                                tap,
+                                null
+                        );
                     }
 
                     activeTapOns.remove(tripKey);
@@ -107,14 +126,38 @@ public class TapToTripMatcher {
             }
         }
 
-        // Process the tap on that only appear once.
+        // Process Tap ON events that remain unmatched at the end of input.
         activeTapOns.values().stream()
-                .map(this::createIncompleteTrip)
-                .forEach(trips::add);
+                .forEach(tapOn -> {
+                    logAbnormalTap(
+                            "TAP_ON_WITHOUT_TAP_OFF",
+                            tapOn,
+                            null
+                    );
+                    trips.add(createIncompleteTrip(tapOn));
+                });
 
         return trips.stream()
                 .sorted(TRIP_ORDER)
                 .toList();
+    }
+
+    private void logAbnormalTap(
+            String type,
+            Tap tap,
+            Long relatedTapId
+    ) {
+        LOGGER.warn(
+                "Abnormal tap: type={}, tapId={}, relatedTapId={}, "
+                        + "dateTimeUtc={}, companyId={}, busId={}, stopId={}",
+                type,
+                tap.id(),
+                relatedTapId,
+                tap.dateTimeUtc(),
+                tap.companyId(),
+                tap.busId(),
+                tap.stopId()
+        );
     }
 
     private Trip createCompletedTrip(Tap tapOn, Tap tapOff) {

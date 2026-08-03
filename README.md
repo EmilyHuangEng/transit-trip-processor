@@ -140,17 +140,32 @@ JAR cannot be passed as `classpath:input.csv`; provide an external file path.
 ## Matching rules and assumptions
 
 - Input rows are processed by `DateTimeUTC`, with `ID` used as a tie-breaker.
-- An `ON` and `OFF` match when their PAN, company ID, and bus ID are equal.
-- A second matching `ON` makes the previous unmatched `ON` incomplete and starts
-  a new trip.
-- An unmatched `OFF` is ignored because its starting stop, start time, duration,
-  and charge cannot be determined.
+- An `ON` and an `OFF` match when their PAN, company ID, and bus ID are equal.
+- A matching `ON` and `OFF` at different stops form a completed trip.
+- A matching `ON` and `OFF` at the same stop form a cancelled trip.
+- An `ON` without a matching `OFF`:
+  - becomes an incomplete trip;
+  - is charged the maximum fare from its starting stop; and
+  - is recorded in a `WARN` log.
+- If another matching `ON` arrives while an earlier `ON` is still active:
+  - the earlier `ON` becomes an incomplete trip;
+  - the new `ON` starts a new trip;
+  - both trips are priced independently, regardless of how close together the
+    tap-ons occur, so the sequence can result in two charges; and
+  - the sequence is logged because it may be an accidental double tap.
+- An unmatched `OFF`, meaning one without a preceding matching `ON`:
+  - is ignored because its starting stop, start time, duration, and charge cannot
+    be determined; and
+  - is recorded in a `WARN` log.
 - Blank CSV lines are ignored. A non-blank malformed row stops processing and
   reports its line number.
 - Trips are written in start-time order. PAN, company ID, and bus ID are used as
   deterministic tie-breakers.
 - The input is assumed to fit in memory and to contain only the three supported
   stops.
+- More CLI commands may be added later, so command dispatch is extensible.
+- The number of stops is assumed to remain small and change infrequently; fare
+  configuration therefore does not require a database or a complex route model.
 
 ## Project structure
 
